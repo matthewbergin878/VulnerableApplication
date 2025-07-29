@@ -34,6 +34,17 @@ def fetch_products():
 
     return jsonify(product_list)
 
+@app.route('/product/<int:product_id>', methods=['GET'])
+def fetch_product(product_id):
+    conn = get_db_connection()
+    product = conn.execute('SELECT * FROM products WHERE id = ?', (product_id,)).fetchone()
+    conn.close()
+
+    if product is None:
+        return jsonify({'error': 'Product not found'}), 404
+
+    return jsonify(dict(product))
+
 @app.route('/product/<int:product_id>', methods=['PUT'])
 def update_product(product_id):
     updated_product = request.get_json()
