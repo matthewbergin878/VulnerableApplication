@@ -34,6 +34,22 @@ def fetch_products():
 
     return jsonify(product_list)
 
+@app.route('/product/<int:product_id>', methods=['PUT'])
+def update_product(product_id):
+    updated_product = request.get_json()
+    product_name = updated_product.get('product_name')
+    description = updated_product.get('description')
+    price = updated_product.get('price')
+    stock = updated_product.get('stock')
+
+    conn = get_db_connection()
+    conn.execute(
+        'UPDATE products SET product_name = ?, description = ?, price = ?, stock = ? WHERE id = ?',
+        (product_name, description, price, stock, product_id)
+    )
+    conn.commit()
+    conn.close()
+
 @app.route('/purchase/<int:product_id>', methods=['POST'])
 def purchase_product(product_id):
     conn = get_db_connection()
