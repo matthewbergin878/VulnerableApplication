@@ -37,7 +37,7 @@ def fetch_products():
 @app.route('/product/<int:product_id>', methods=['GET'])
 def fetch_product(product_id):
     conn = get_db_connection()
-    product = conn.execute('SELECT * FROM products WHERE id = ?', (product_id,)).fetchone()
+    product = conn.execute(f'SELECT * FROM products WHERE id = {product_id}').fetchone()
     conn.close()
 
     if product is None:
@@ -66,7 +66,9 @@ def purchase_product(product_id):
     
     try:
 
-        product = conn.execute('SELECT * FROM products WHERE id = ?', (product_id,)).fetchone()
+        product = fetch_product(product_id).get_json()
+
+        print(product)
         
         if product is None:
             return jsonify({'error': 'Product not found'}), 404
@@ -77,7 +79,7 @@ def purchase_product(product_id):
 
         # Reduce stock by 1
         new_stock = product['stock'] - 1
-        conn.execute('UPDATE products SET stock = ? WHERE id = ?', (new_stock, product_id))
+        conn.execute(f'UPDATE products SET stock = {new_stock} WHERE id = {product_id}')
         conn.commit()
 
         print(product)
