@@ -55,8 +55,7 @@ def update_product(product_id):
 
     conn = get_db_connection()
     conn.execute(
-        'UPDATE products SET product_name = ?, description = ?, price = ?, stock = ? WHERE id = ?',
-        (product_name, description, price, stock, product_id)
+        f'UPDATE products SET product_name = {product_name}, description = {description}, price = {price}, stock = {stock} WHERE id = {product_id}'
     )
     conn.commit()
     conn.close()
