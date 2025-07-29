@@ -47,36 +47,61 @@
     <script>
         const API_BASE_URL = 'http://127.0.0.1:5000';
 
-        // Fetch and display all products
-        async function fetchProducts() {
-            try {
-                const response = await fetch(`${API_BASE_URL}/products`);
-                const products = await response.json();
+        // Function to get a cookie by name
+function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+}
 
-                const productsDiv = document.getElementById('products');
-                productsDiv.innerHTML = '';
+// Fetch and display all products
+async function fetchProducts() {
+    try {
+        // Fetch the CSRF token from the `_csrf_token` cookie
+        const csrfToken = getCookie('_csrf_token');
+        console.log('CSRF Token:', csrfToken); // Log the token for debugging
 
-                products.forEach(product => {
-                    const productDiv = document.createElement('div');
-                    productDiv.className = 'product';
+        // Make the GET request with the CSRF token in the headers
+        const response = await fetch('/products', {
+            method: 'GET',
+            headers: {
+                'X-CSRFToken': csrfToken // Include the CSRF token
+            },
+            credentials: 'include' // Include cookies in the request
+        });
 
-                    productDiv.innerHTML = `
-                        <h2>${product.product_name}</h2>
-                        <p>${product.description}</p>
-                        <p>Price: $${product.price.toFixed(2)}</p>
-                        <p>Stock: ${product.stock}</p>
-                        <button onclick="purchaseProduct(${product.id})" ${product.stock <= 0 ? 'disabled' : ''}>
-                            ${product.stock > 0 ? 'Purchase' : 'Out of Stock'}
-                        </button>
-                    `;
-
-                    productsDiv.appendChild(productDiv);
-                });
-            } catch (error) {
-                console.error('Error fetching products:', error);
-                alert('Failed to fetch products. Please try again later.');
-            }
+        if (!response.ok) {
+            throw new Error('Failed to fetch products');
         }
+
+        const products = await response.json();
+
+        // Display the products
+        const productsDiv = document.getElementById('products');
+        productsDiv.innerHTML = '';
+
+        products.forEach(product => {
+            const productDiv = document.createElement('div');
+            productDiv.className = 'product';
+
+            productDiv.innerHTML = `
+                <h2>${product.product_name}</h2>
+                <p>${product.description}</p>
+                <p>Price: $${product.price.toFixed(2)}</p>
+                <p>Stock: ${product.stock}</p>
+                <button onclick="purchaseProduct(${product.id})" ${product.stock <= 0 ? 'disabled' : ''}>
+                    ${product.stock > 0 ? 'Purchase' : 'Out of Stock'}
+                </button>
+            `;
+
+            productsDiv.appendChild(productDiv);
+        });
+    } catch (error) {
+        console.error('Error fetching products:', error);
+        alert('Failed to fetch products. Please try again later.');
+    }
+}
+
 
         // Handle product purchase
         async function purchaseProduct(productId) {
