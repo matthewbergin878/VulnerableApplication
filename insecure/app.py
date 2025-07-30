@@ -60,10 +60,15 @@ def update_product(product_id):
     conn = get_db_connection()
     #sql injection vulnerability
     conn.execute(
-        f'UPDATE products SET product_name = {product_name}, description = {description}, price = {price}, stock = {stock} WHERE id = {product_id}'
+        f"UPDATE products SET product_name = '{product_name}', description = '{description}', price = {price}, stock = {stock} WHERE id = {product_id}"
     )
     conn.commit()
     conn.close()
+
+    response = jsonify(updated_product)
+    response.status_code = 200
+
+    return response
 
 @app.route('/purchase/<int:product_id>', methods=['POST'])
 def purchase_product(product_id):
@@ -72,6 +77,12 @@ def purchase_product(product_id):
     try:
 
         product = fetch_product(product_id).get_json()
+
+        request_data = request.get_json()
+        if not request_data or 'price' not in request_data:
+            return jsonify({'error': 'Price is required in the request body'}), 400
+        #allows user to manipulate the price
+        provided_price = request_data['price']
         
         if product is None:
             return jsonify({'error': 'Product not found'}), 404
@@ -92,7 +103,7 @@ def purchase_product(product_id):
                 'id': product['id'],
                 'product_name': product['product_name'],
                 'description': product['description'],
-                'price': product['price'],
+                'price': provided_price,
                 'stock': new_stock
             }
         })
