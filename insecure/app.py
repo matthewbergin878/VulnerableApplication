@@ -34,19 +34,31 @@ def fetch_products():
 
     return jsonify(product_list)
 
-@app.route('/product/<int:product_id>', methods=['GET'])
+#not specifying integer
+@app.route('/product/<product_id>', methods=['GET'])
 def fetch_product(product_id):
     #get a specific product from the db and return it as is
     conn = get_db_connection()
-    #sql injection vulnerability
-    product = conn.execute(f'SELECT * FROM products WHERE id = {product_id}').fetchone()
-    conn.close()
+    try:
+        #sql injection vulnerability
+        query = f"SELECT * FROM products WHERE id = '{product_id}'"
+        app.logger.debug(f"Executing query: {query}")
+        products = conn.execute(query).fetchall()
 
-    if product is None:
-        return jsonify({'error': 'Product not found'}), 404
-    
-    #stored xss vulnerability
-    return jsonify(dict(product))
+        #check if any products were found
+        if not products:
+            return jsonify({'error': 'No product found'}), 404
+
+        # stored xss vulnerability
+        product_list = [dict(product) for product in products]
+        return jsonify(product_list)
+
+    except Exception as e:
+        app.logger.error(f"Error fetching product: {e}")
+        return jsonify({'error': str(e)}), 500
+
+    finally:
+        conn.close()
 
 @app.route('/product/<int:product_id>', methods=['PUT'])
 def update_product(product_id):
