@@ -1,7 +1,6 @@
 from flask import Flask, jsonify, request, render_template
 import sqlite3
 import logging
-import html
 
 # Initialize Flask app
 app = Flask(__name__, template_folder='templates')
@@ -26,6 +25,7 @@ def serve_frontend():
 
 @app.route('/products', methods=['GET'])
 def fetch_products():
+    #get all products from the db and return them as is
     conn = get_db_connection()
     products = conn.execute('SELECT * FROM products').fetchall()
     conn.close()
@@ -36,17 +36,21 @@ def fetch_products():
 
 @app.route('/product/<int:product_id>', methods=['GET'])
 def fetch_product(product_id):
+    #get a specific product from the db and return it as is
     conn = get_db_connection()
+    #sql injection vulnerability
     product = conn.execute(f'SELECT * FROM products WHERE id = {product_id}').fetchone()
     conn.close()
 
     if product is None:
         return jsonify({'error': 'Product not found'}), 404
-
+    
+    #stored xss vulnerability
     return jsonify(dict(product))
 
 @app.route('/product/<int:product_id>', methods=['PUT'])
 def update_product(product_id):
+    #update a product in the database with user input
     updated_product = request.get_json()
     product_name = updated_product.get('product_name')
     description = updated_product.get('description')
@@ -54,6 +58,7 @@ def update_product(product_id):
     stock = updated_product.get('stock')
 
     conn = get_db_connection()
+    #sql injection vulnerability
     conn.execute(
         f'UPDATE products SET product_name = {product_name}, description = {description}, price = {price}, stock = {stock} WHERE id = {product_id}'
     )
@@ -67,8 +72,6 @@ def purchase_product(product_id):
     try:
 
         product = fetch_product(product_id).get_json()
-
-        print(product)
         
         if product is None:
             return jsonify({'error': 'Product not found'}), 404
@@ -81,8 +84,6 @@ def purchase_product(product_id):
         new_stock = product['stock'] - 1
         conn.execute(f'UPDATE products SET stock = {new_stock} WHERE id = {product_id}')
         conn.commit()
-
-        print(product)
 
         # Prepare the response
         response = jsonify({
@@ -107,7 +108,6 @@ def purchase_product(product_id):
         conn.close()
 
 
-# Main entry point
 if __name__ == '__main__':
     # Create the database and add sample data if it doesn't exist
     conn = sqlite3.connect(DATABASE)
@@ -121,5 +121,5 @@ if __name__ == '__main__':
     conn.commit()
     conn.close()
 
-    # Run the Flask app
+    # Run the app
     app.run(debug=True)
