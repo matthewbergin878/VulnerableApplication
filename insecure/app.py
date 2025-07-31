@@ -5,6 +5,8 @@ import logging
 #Initialize app
 app = Flask(__name__, template_folder='templates')
 
+
+#insecure session manager
 session = {}
 
 
