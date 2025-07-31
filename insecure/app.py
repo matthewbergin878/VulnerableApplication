@@ -149,16 +149,17 @@ def purchase_product(product_id):
             return jsonify({'error': 'Price is required in the request body'}), 400
         #allows user to manipulate the price
         provided_price = request_data['price']
-        
         if product is None:
             return jsonify({'error': 'Product not found'}), 404
-        
+
+
         # Check if stock is available
-        if product['stock'] <= 0:
+        if product[0]['stock'] <= 0:
             return jsonify({'error': 'Product is out of stock'}), 400
 
+
         # Reduce stock by 1
-        new_stock = product['stock'] - 1
+        new_stock = product[0]['stock'] - 1
         conn.execute(f'UPDATE products SET stock = {new_stock} WHERE id = {product_id}')
         conn.commit()
 
@@ -166,9 +167,9 @@ def purchase_product(product_id):
         response = jsonify({
             'message': 'Purchase successful',
             'product': {
-                'id': product['id'],
-                'product_name': product['product_name'],
-                'description': product['description'],
+                'id': product[0]['id'],
+                'product_name': product[0]['product_name'],
+                'description': product[0]['description'],
                 'price': provided_price,
                 'stock': new_stock
             }
