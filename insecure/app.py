@@ -2,8 +2,10 @@ from flask import Flask, jsonify, request, render_template
 import sqlite3
 import logging
 
-# Initialize Flask app
+#Initialize app
 app = Flask(__name__, template_folder='templates')
+
+session = {}
 
 
 # Configure logging
@@ -21,6 +23,59 @@ def get_db_connection():
 def serve_frontend():
     # Serve the updated storefront HTML file
     return render_template('storefront.html')
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'GET':
+        return render_template('register.html')
+
+    if request.method == 'POST':
+        username = request.json.get('username')
+        password = request.json.get('password')
+        confirm_password = request.json.get('confirm_password')
+
+        if password != confirm_password:
+            return jsonify({'error': 'Passwords do not match'}), 400
+        
+
+        conn = get_db_connection()
+        try:
+            conn.execute(
+                'INSERT INTO users (username, password) VALUES (?, ?)',
+                (username, password)
+            )
+            conn.commit()
+        except sqlite3.IntegrityError:
+            return jsonify({'error': 'Username already exists'}), 400
+        finally:
+            conn.close()
+
+        return jsonify({'message': 'Registration successful'}), 200
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'GET':
+        return render_template('login.html')
+
+    if request.method == 'POST':
+        username = request.json.get('username')
+        password = request.json.get('password')
+
+        conn = get_db_connection()
+        user = conn.execute('SELECT * FROM users WHERE username = ? AND password = ?', (username,password)).fetchone()
+        conn.close()
+
+        if user is None:
+            return jsonify({'error': 'Invalid username or password'}), 401
+            
+
+        # Set the session for the logged-in user
+        session['user_id'] = user['id']
+        session['username'] = user['username']
+
+        # Return a redirect response to the home page
+        return jsonify({'message': 'Login successful', 'redirect_url': '/'}), 200
+
 
 
 @app.route('/products', methods=['GET'])
@@ -42,7 +97,6 @@ def fetch_product(product_id):
     try:
         #sql injection vulnerability
         query = f"SELECT * FROM products WHERE id = '{product_id}'"
-        app.logger.debug(f"Executing query: {query}")
         products = conn.execute(query).fetchall()
 
         #check if any products were found
@@ -140,6 +194,11 @@ if __name__ == '__main__':
         description TEXT, 
         price REAL NOT NULL, 
         stock INTEGER NOT NULL
+    );""")
+    conn.execute("""CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY, 
+        username TEXT NOT NULL, 
+        password TEXT NOT NULL
     );""")
     conn.commit()
     conn.close()
