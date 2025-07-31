@@ -41,6 +41,7 @@ def register():
         
 
         conn = get_db_connection()
+        #store password in plaintext
         try:
             conn.execute(
                 'INSERT INTO users (username, password) VALUES (?, ?)',
@@ -64,7 +65,9 @@ def login():
         password = request.json.get('password')
 
         conn = get_db_connection()
-        user = conn.execute('SELECT * FROM users WHERE username = ? AND password = ?', (username,password)).fetchone()
+        #direct compare password instead of hash
+        #also vulnerable to sql injection: a' OR '1'='1'--
+        user = conn.execute(f"SELECT * FROM users WHERE username = '{username}'' AND password = '{password}'").fetchone()
         conn.close()
 
         if user is None:
@@ -118,6 +121,7 @@ def fetch_product(product_id):
 
 @app.route('/product/<int:product_id>', methods=['PUT'])
 def update_product(product_id):
+    #no login check
     #update a product in the database with user input
     updated_product = request.get_json()
     product_name = updated_product.get('product_name')
